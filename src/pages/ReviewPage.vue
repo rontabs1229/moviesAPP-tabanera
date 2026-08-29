@@ -29,6 +29,10 @@ const isAdmin = computed(() => {
   return currentUser.value && currentUser.value.isAdmin === true;
 });
 
+const isLoggedIn = computed(() => {
+  return !!currentUser.value;
+});
+
 const averageRating = computed(() => {
   if (!movie.value || !movie.value.ratings || movie.value.ratings.length === 0) return '0';
   const validRatings = movie.value.ratings.filter(item => item.rating > 0);
@@ -101,8 +105,13 @@ async function fetchMovieDetails(preserveRating = false) {
 async function fetchInitialData() {
   try {
     isLoading.value = true;
-    const userRes = await api.get('/users/details');
-    currentUser.value = userRes.data.user || userRes.data;
+    try {
+      const userRes = await api.get('/users/details');
+      currentUser.value = userRes.data.user || userRes.data;
+    } catch (userError) {
+      // No valid session / not logged in — proceed as a guest viewer.
+      currentUser.value = null;
+    }
     await fetchMovieDetails();
   } catch (error) {
     console.error('Error initializing page:', error);
@@ -121,6 +130,10 @@ function handleGoBack() {
 }
 
 function handleStarClick(star) {
+  if (!isLoggedIn.value) {
+    notyf?.error('Please log in to rate content.');
+    return;
+  }
   if (isAdmin.value) {
     notyf?.error('Admin is not allowed to rate content.');
     return;
@@ -129,6 +142,10 @@ function handleStarClick(star) {
 }
 
 async function submitRating() {
+  if (!isLoggedIn.value) {
+    notyf?.error('Please log in to rate content.');
+    return;
+  }
   if (isAdmin.value) {
     notyf?.error('Admin is not allowed to rate content.');
     return;
@@ -154,8 +171,12 @@ async function submitRating() {
 }
 
 async function deleteRating() {
+  if (!isLoggedIn.value) {
+    notyf?.error('Please log in to manage your rating.');
+    return;
+  }
   if (isAdmin.value) return;
-  
+
   if (!window.confirm('Are you sure you want to remove your rating?')) {
     return;
   }
@@ -173,6 +194,11 @@ async function deleteRating() {
 }
 
 function handleCommentInput(e) {
+  if (!isLoggedIn.value) {
+    commentText.value = '';
+    notyf?.error('Please log in to comment.');
+    return;
+  }
   if (isAdmin.value) {
     commentText.value = '';
     notyf?.error('Admin is not allowed to comment.');
@@ -193,6 +219,10 @@ function clearComment() {
 }
 
 async function submitComment() {
+  if (!isLoggedIn.value) {
+    notyf?.error('Please log in to comment.');
+    return;
+  }
   if (isAdmin.value) {
     notyf?.error('Admin is not allowed to comment.');
     return;
@@ -226,6 +256,10 @@ async function submitComment() {
 }
 
 function editComment(comment) {
+  if (!isLoggedIn.value) {
+    notyf?.error('Please log in to comment.');
+    return;
+  }
   if (isAdmin.value) {
     notyf?.error('Admin is not allowed to comment.');
     return;
@@ -235,6 +269,11 @@ function editComment(comment) {
 }
 
 async function deleteComment(commentId) {
+  if (!isLoggedIn.value) {
+    notyf?.error('Please log in to comment.');
+    return;
+  }
+
   if (!window.confirm('Are you sure you want to delete this comment?')) {
     return;
   }
