@@ -154,8 +154,10 @@
 
   const isHome = computed(() => route.path === '/');
 
+  // Single source of truth: the store's user.token, which is kept in sync
+  // with sessionStorage by getUserDetails()/clearUser() in stores/global.js.
   const isLoggedIn = computed(() => {
-    return Boolean(user.value && (user.value.email || user.value.token || localStorage.getItem('token')));
+    return Boolean(user.value?.token);
   });
 
   const selectMovie = (movie) => {
@@ -190,12 +192,7 @@
 
   const handleLogout = () => {
     closeMenu();
-    if (typeof globalStore.logout === 'function') {
-      globalStore.logout();
-    } else {
-      user.value = null;
-      localStorage.removeItem('token');
-    }
+    globalStore.logout();
     router.push('/login');
   };
 </script>

@@ -34,35 +34,29 @@
       });
 
       if (response.status === 200) {
+        const token = response.data?.access || response.data?.token;
+        if (!token) {
+          notyf?.error("Login Failed. Please contact admin.");
+          return;
+        }
+        // Note: no direct localStorage/sessionStorage write here —
+        // globalStore.getUserDetails() is the single place that writes
+        // the token, so there's only one source of truth for it.
+
+        // Let the store own fetching user details and writing the token,
+        // so `user.value` always has the same { token, email, isAdmin } shape
+        // everywhere in the app (navbar, App.vue rehydration, etc.).
+        await globalStore.getUserDetails(token);
+
+        if (!user.value?.token) {
+          notyf?.error("Login Failed. Please contact admin.");
+          return;
+        }
+
         notyf?.success("Login Successful");
 
-        // Store token in localStorage
-        const token = response.data?.access || response.data?.token;
-        if (token) {
-          localStorage.setItem('token', token);
-        }
-
-        let userData = response.data?.user || response.data;
-
-        // If the login payload doesn't contain user flags (like isAdmin), fetch user details
-        if (userData.isAdmin === undefined) {
-          try {
-            const userDetailsRes = await api.get('/users/details');
-            userData = userDetailsRes.data?.user || userDetailsRes.data;
-          } catch (err) {
-            console.error("Could not fetch user details", err);
-          }
-        }
-
-        // Update global store state
-        if (globalStore.setUser) {
-          globalStore.setUser(userData);
-        } else {
-          user.value = userData;
-        }
-
         // Role-based redirection logic
-        if (userData?.isAdmin) {
+        if (user.value?.isAdmin) {
           router.push({ name: 'Dashboard' });
         } else {
           router.push({ path: '/profile' });
